@@ -15,7 +15,6 @@ import * as restTypes from "../script/types/rest-definitions";
 import * as storage from "../script/storage/storage";
 import * as testUtils from "./utils";
 
-import { AzureStorage } from "../script/storage/azure-storage";
 import { JsonStorage } from "../script/storage/json-storage";
 
 import Permissions = storage.Permissions;
@@ -23,10 +22,6 @@ import Permissions = storage.Permissions;
 if (!process.env.AZURE_MANAGEMENT_URL) {
   // cannot use local JSON storage when running tests against an Azure server
   describe("Management Rest API with JSON Storage", () => managementTests(/*useJsonStorage=*/ true));
-}
-
-if (process.env.TEST_AZURE_STORAGE) {
-  describe("Management Rest API with Azure Storage", () => managementTests());
 }
 
 const ACCESS_KEY_MASKING_STRING = "(hidden)";
@@ -52,23 +47,19 @@ function managementTests(useJsonStorage?: boolean): void {
 
     return q<void>(null)
       .then(() => {
-        if (process.env.AZURE_MANAGEMENT_URL) {
-          serverUrl = process.env.AZURE_MANAGEMENT_URL;
-          storage = useJsonStorage ? new JsonStorage() : new AzureStorage();
-        } else {
-          // use the middleware defined in DefaultServer
-          var deferred: q.Deferred<void> = q.defer<void>();
+        storage = new JsonStorage();
+        // use the middleware defined in DefaultServer
+        var deferred: q.Deferred<void> = q.defer<void>();
 
-          defaultServer.start(function (err: Error, app: express.Express, serverStorage: storage.Storage) {
-            if (err) deferred.reject(err);
+        defaultServer.start(function (err: Error, app: express.Express, serverStorage: storage.Storage) {
+          if (err) deferred.reject(err);
 
-            server = app;
-            storage = serverStorage;
-            deferred.resolve(<void>null);
-          }, useJsonStorage);
+          server = app;
+          storage = serverStorage;
+          deferred.resolve(<void>null);
+        });
 
-          return deferred.promise;
-        }
+        return deferred.promise;
       })
       .then(() => {
         return storage.addAccount(account);
