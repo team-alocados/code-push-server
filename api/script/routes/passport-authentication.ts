@@ -4,12 +4,10 @@
 import * as cookieSession from "cookie-session";
 import { Request, Response, Router, RequestHandler } from "express";
 import * as passport from "passport";
-const passportActiveDirectory = require("passport-azure-ad");
 import * as passportBearer from "passport-http-bearer";
 import * as passportGitHub from "passport-github2";
 import * as passportWindowsLive from "passport-windowslive";
 import * as q from "q";
-import * as superagent from "superagent"
 import rateLimit from "express-rate-limit";
 
 import * as converterUtils from "../utils/converter";
@@ -162,7 +160,6 @@ export class PassportAuthentication {
 
     if (isMicrosoftAuthenticationEnabled) {
       this.setupMicrosoftRoutes(router, microsoftClientId, microsoftClientSecret);
-      this.setupAzureAdRoutes(router, microsoftClientId, microsoftClientSecret);
     }
 
     router.get("/auth/login", this._cookieSessionMiddleware, (req: Request, res: Response): any => {
@@ -260,7 +257,7 @@ export class PassportAuthentication {
     );
 
     router.get(
-      "/auth/register/" + providerName, 
+      "/auth/register/" + providerName,
       limiter,
       this._cookieSessionMiddleware,
       (req: Request, res: Response, next: (err?: any) => void): any => {
@@ -350,8 +347,8 @@ export class PassportAuthentication {
                   const message: string = isProviderValid
                     ? "You are already registered with the service using this authentication provider.<br/>Please cancel the registration process (Ctrl-C) on the CLI and login with your account."
                     : "You are already registered with the service using a different authentication provider." +
-                    "<br/>Please cancel the registration process (Ctrl-C) on the CLI and login with your registered account." +
-                    "<br/>Once logged in, you can optionally link this provider to your account.";
+                      "<br/>Please cancel the registration process (Ctrl-C) on the CLI and login with your registered account." +
+                      "<br/>Once logged in, you can optionally link this provider to your account.";
                   restErrorUtils.sendAlreadyExistsPage(res, message);
                   return;
                 case "link":
@@ -393,7 +390,7 @@ export class PassportAuthentication {
                   restErrorUtils.sendForbiddenPage(
                     res,
                     "We weren't able to link your account, because the primary email address registered with your provider does not match the one on your CodePush account." +
-                    "<br/>Please use a matching email address, or contact us if you'd like to change the email address on your CodePush account."
+                      "<br/>Please use a matching email address, or contact us if you'd like to change the email address on your CodePush account."
                   );
                   return;
                 case "register":
@@ -473,41 +470,6 @@ export class PassportAuthentication {
       new passportWindowsLive.Strategy(
         options,
         (accessToken: string, refreshToken: string, profile: passport.Profile, done: (error: any, user: any) => void): void => {
-          done(/*err*/ null, profile);
-        }
-      )
-    );
-
-    this.setupCommonRoutes(router, providerName, strategyName);
-  }
-
-  private setupAzureAdRoutes(router: Router, microsoftClientId: string, microsoftClientSecret: string): void {
-    const providerName = PassportAuthentication.AZURE_AD_PROVIDER_NAME;
-    const strategyName = "azuread-openidconnect";
-    const options: any = {
-      redirectUrl: this.getCallbackUrl(providerName),
-      clientID: microsoftClientId,
-      clientSecret: microsoftClientSecret,
-      identityMetadata: "https://login.microsoftonline.com/common/v2.0/.well-known/openid-configuration",
-      responseMode: "query",
-      responseType: "code",
-      scope: ["email", "profile"],
-      skipUserProfile: true, // Should be set to true for Azure AD
-      validateIssuer: false, // We allow AD authentication across multiple tenants
-      allowHttpForRedirectUrl: true,
-    };
-
-    passport.use(
-      new passportActiveDirectory.OIDCStrategy(
-        options,
-        (
-          iss: string,
-          sub: string,
-          profile: passport.Profile,
-          accessToken: string,
-          refreshToken: string,
-          done: (error: any, user: any) => void
-        ) => {
           done(/*err*/ null, profile);
         }
       )

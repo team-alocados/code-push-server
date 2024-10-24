@@ -10,12 +10,14 @@ Please refer to [react-native-code-push](https://github.com/microsoft/react-nati
 
 #### Prerequisites
 
-The CodePush Server requires Azure Blob Storage to operate. For the local setup, there is an option to use emulated local storage with Azurite. 
+~~The CodePush Server requires Azure Blob Storage to operate. For the local setup, there is an option to use emulated local storage with Azurite. ~~
 Please follow Azurite [official documentation](https://learn.microsoft.com/en-us/azure/storage/common/storage-use-azurite) to [install](https://learn.microsoft.com/en-us/azure/storage/common/storage-use-azurite?tabs=visual-studio#install-azurite) and [run](https://learn.microsoft.com/en-us/azure/storage/common/storage-use-azurite?tabs=visual-studio#running-azurite-from-the-command-line) it locally.
 Additionally, you need to specify [EMULATED](ENVIRONMENT.md#emulated) flag equals true in the environmental variables.
 
 #### Steps
+
 To run the CodePush Server locally, follow these steps:
+
 1. Clone the CodePush Service repository.
 1. Create a `.env` file and configure the mandatory variables as outlined in the `ENVIRONMENT.md` file.
 1. Install dependencies by running `npm install`.
@@ -26,39 +28,39 @@ By default, local CodePush server runs on HTTP. To run CodePush Server on HTTPS:
 
 1. Create a `certs` directory and place `cert.key` (private key) and `cert.crt` (certificate) files there.
 2. Set environment variable [HTTPS](./ENVIRONMENT.md#https) to true.
- 
+
 > **Warning!** When hosting CodePush on Azure App Service HTTPS is enabled by default.
 
 For more detailed instructions and configuration options, please refer to the [ENVIRONMENT.md](./ENVIRONMENT.md) file.
 
-### Azure
+~~### Azure~~
 
-CodePush Server is designed to run as [Azure App Service](https://learn.microsoft.com/en-us/azure/app-service/overview).
+~~CodePush Server is designed to run as [Azure App Service](https://learn.microsoft.com/en-us/azure/app-service/overview).~~
 
 #### Prerequisites
 
-To deploy CodePush to Azure, an active Azure account and subscription are needed. 
-For more information, follow Azure's [official documentation](https://azure.microsoft.com/en-us/get-started/).
-During the deployment process, the included bicep script will create bare minimum Azure services needed to run CodePush Server including:
-1. Service plan
-2. App Service
-3. Storage account
+~~To deploy CodePush to Azure, an active Azure account and subscription are needed.~~
+~~For more information, follow Azure's [official documentation](https://azure.microsoft.com/en-us/get-started/).~~
+~~During the deployment process, the included bicep script will create bare minimum Azure services needed to run CodePush Server including:~~
+~~1. Service plan~~
+~~2. App Service~~
+~~3. Storage account~~
 
-Additionally, for user authentication, a GitHub or Microsoft OAuth application is needed. 
+Additionally, for user authentication, a GitHub or Microsoft OAuth application is needed.
 More detailed instructions on how to set up one can be found in the section [OAuth Apps](#oauth-apps).
 
 #### Steps
 
 **NOTE** Please be aware of [project-suffix naming limitations](#project-suffix) for resources in Azure .
 
-1. Login to your Azure account: `az login`
-2. Select subscription for deployment: `az account set --subscription <subscription-id>`
-3. Create resource group for CodePush resources: `az group create --name <resource-group-name> --location <az-location eg. eastus>`
-4. Deploy infrastructure with the next command: `az deployment group create --resource-group <resource-group-name> --template-file ./codepush-infrastructure.bicep --parameters project_suffix=<project-suffix> az_location=<az-location eg. eastus> github_client_id=<github-client-id> github_client_secret=<github-client-secret> microsoft_client_id=<microsoft-client-id> microsoft_client_secret=<microsoft-client-secret>`. OAuth parameters (both GitHub and Microsoft) are optional. It is possible to specify them after the deployment in environment settings of Azure WebApp.
-5. Deploy CodePush to the Azure WebApp created during infrastructure deployment. Follow the Azure WebApp [official documentation](https://learn.microsoft.com/en-us/azure/app-service/) "Deployment and configuration" section for detailed instructions.
+~~1. Login to your Azure account: `az login`~~
+~~2. Select subscription for deployment: `az account set --subscription <subscription-id>`~~
+~~3. Create resource group for CodePush resources: `az group create --name <resource-group-name> --location <az-location eg. eastus>`~~
+~~4. Deploy infrastructure with the next command: `az deployment group create --resource-group <resource-group-name> --template-file ./codepush-infrastructure.bicep --parameters project_suffix=<project-suffix> az_location=<az-location eg. eastus> github_client_id=<github-client-id> github_client_secret=<github-client-secret> microsoft_client_id=<microsoft-client-id> microsoft_client_secret=<microsoft-client-secret>`. OAuth parameters (both GitHub and Microsoft) are optional. It is possible to specify them after the deployment in environment settings of Azure WebApp.~~
+~~5. Deploy CodePush to the Azure WebApp created during infrastructure deployment. Follow the Azure WebApp [official documentation](https://learn.microsoft.com/en-us/azure/app-service/) "Deployment and configuration" section for detailed instructions.~~
 
-> **Warning!** The created Azure Blob Storage has default access settings. 
-> This means that all users within the subscription can access the storage account tables. 
+> **Warning!** The created Azure Blob Storage has default access settings.
+> This means that all users within the subscription can access the storage account tables.
 > Adjusting the storage account access settings to ensure proper security is the responsibility of the owner.
 
 ## Configure react-native-code-push
@@ -84,8 +86,8 @@ in `Info.plist` file, add following lines, replacing `server-url` with your serv
 
 ## OAuth apps
 
-CodePush uses GitHub and Microsoft as identity providers, so for authentication purposes, you need to have an OAuth App registration for CodePush. 
-Client id and client secret created during registration should be provided to the CodePush server in environment variables. 
+CodePush uses GitHub and Microsoft as identity providers, so for authentication purposes, you need to have an OAuth App registration for CodePush.
+Client id and client secret created during registration should be provided to the CodePush server in environment variables.
 Below are instructions on how to create OAuth App registrations.
 
 ### GitHub
