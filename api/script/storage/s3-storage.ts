@@ -46,7 +46,7 @@ export class S3Storage implements storage.Storage {
 
   public accessKeyNameToAccountIdMap: { [accessKeyName: string]: { accountId: string; expires: number } } = {};
 
-  private static CollaboratorNotFound: string = "The specified e-mail address doesn't represent a registered user";
+  private static AccountNotFound: string = "The specified e-mail address doesn't represent a registered user";
   private _blobServerPromise: Promise<http.Server>;
 
   constructor() {
@@ -207,6 +207,61 @@ export class S3Storage implements storage.Storage {
   }
 
   /**
+   * 현재 계정에 대한 협업자 추가
+   */
+  public addCollaborator(accountId: string, appId: string, email: string): Promise<void> {
+    if (isPrototypePollutionKey(email)) {
+      return S3Storage.getRejectedPromise(storage.ErrorCode.Invalid, "Invalid email parameter");
+    }
+    return this.getApp(accountId, appId).then((app: storage.App) => {
+      if (this.isCollaborator(app.collaborators, email) || this.isOwner(app.collaborators, email)) {
+        return S3Storage.getRejectedPromise(storage.ErrorCode.AlreadyExists);
+      }
+
+      const targetCollaboratorAccountId: string = this.emailToAccountMap[email.toLowerCase()];
+      if (!targetCollaboratorAccountId) {
+        return S3Storage.getRejectedPromise(storage.ErrorCode.NotFound, S3Storage.AccountNotFound);
+      }
+
+      // Use the original email stored on the account to ensure casing is consistent
+      email = this.accounts[targetCollaboratorAccountId].email;
+
+      app.collaborators[email] = { accountId: targetCollaboratorAccountId, permission: storage.Permissions.Collaborator };
+      this.addCollaboratorAccountPointer(targetCollaboratorAccountId, app.id);
+      return this.updateApp(accountId, app);
+    });
+  }
+
+  /**
+   * 현재 앱에 대한 협업자(기여자) 정보 반환
+   */
+  public getCollaborators(accountId: string, appId: string): Promise<storage.CollaboratorMap> {
+    return this.getApp(accountId, appId).then((app: storage.App) => {
+      return q<storage.CollaboratorMap>(app.collaborators);
+    });
+  }
+
+  /**
+   * 현재 앱에 대한 협업자(기여자) 삭제
+   */
+  public removeCollaborator(accountId: string, appId: string, email: string): Promise<void> {
+    return this.getApp(accountId, appId).then((app: storage.App) => {
+      if (this.isOwner(app.collaborators, email)) {
+        return S3Storage.getRejectedPromise(storage.ErrorCode.AlreadyExists);
+      }
+
+      const targetCollaboratorAccountId: string = this.emailToAccountMap[email.toLowerCase()];
+      if (!this.isCollaborator(app.collaborators, email) || !targetCollaboratorAccountId) {
+        return S3Storage.getRejectedPromise(storage.ErrorCode.NotFound);
+      }
+
+      this.removeCollaboratorAccountPointer(targetCollaboratorAccountId, appId);
+      delete app.collaborators[email];
+      return this.updateApp(accountId, app);
+    });
+  }
+
+  /**
    * 액세스 키를 통한 계정 정보 반환
    */
   public getAccountIdFromAccessKey(accessKey: string): Promise<string> {
@@ -355,7 +410,7 @@ export class S3Storage implements storage.Storage {
       const targetOwnerAccountId: string = this.emailToAccountMap[email.toLowerCase()];
 
       if (!targetOwnerAccountId) {
-        return S3Storage.getRejectedPromise(storage.ErrorCode.NotFound, S3Storage.CollaboratorNotFound);
+        return S3Storage.getRejectedPromise(storage.ErrorCode.NotFound, S3Storage.AccountNotFound);
       }
 
       // Use the original email stored on the account to ensure casing is consistent
@@ -741,11 +796,14 @@ export class S3Storage implements storage.Storage {
     return q(<void>null);
   }
 
+  /**
+   * Blob Server 반환
+   */
   private getBlobServer(): Promise<http.Server> {
     if (!this._blobServerPromise) {
       const app: express.Express = express();
 
-      app.get("/:blobId", (req: express.Request, res: express.Response, next: (err?: Error) => void): any => {
+      app.get("/:blobId", (req: express.Request, res: express.Response): any => {
         const blobId: string = req.params.blobId;
         if (this.blobs[blobId]) {
           res.send(this.blobs[blobId]);
@@ -765,6 +823,9 @@ export class S3Storage implements storage.Storage {
     return this._blobServerPromise;
   }
 
+  /**
+   * 새로운 ObjectId 생성
+   */
   private generateNewId(): string {
     const id = "id_" + S3Storage.NextIdNumber;
     S3Storage.NextIdNumber += 1;
@@ -772,7 +833,45 @@ export class S3Storage implements storage.Storage {
     return id;
   }
 
+  /**
+   * Error Response 반환
+   */
   private static getRejectedPromise(errorCode: storage.ErrorCode, message?: string): Promise<any> {
     return q.reject(storage.storageError(errorCode, message));
+  }
+
+  /**
+   * 현재 앱 소유자 여부 확인
+   */
+  private isOwner(list: storage.CollaboratorMap, email: string): boolean {
+    return list && list[email] && list[email].permission === storage.Permissions.Owner;
+  }
+
+  /**
+   * 현재 앱 기여자 여부 확인
+   */
+  private isCollaborator(list: storage.CollaboratorMap, email: string): boolean {
+    return list && list[email] && list[email].permission === storage.Permissions.Collaborator;
+  }
+
+  /**
+   * 현재 계정에 대한 앱 포인터 삭제
+   */
+  private removeCollaboratorAccountPointer(accountId: string, appId: string): void {
+    const accountApps: string[] = this.accountToAppsMap[accountId];
+    const index: number = accountApps.indexOf(appId);
+    if (index > -1) {
+      accountApps.splice(index, 1);
+    }
+  }
+
+  /**
+   * 현재 계정에 대한 앱 포인터 추가
+   */
+  private addCollaboratorAccountPointer(accountId: string, appId: string): void {
+    const accountApps = this.accountToAppsMap[accountId];
+    if (accountApps.indexOf(appId) === -1) {
+      accountApps.push(appId);
+    }
   }
 }

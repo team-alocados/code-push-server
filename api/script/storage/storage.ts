@@ -55,6 +55,7 @@ export interface CollaboratorMap {
 }
 
 export interface App {
+  /*generated*/ collaborators?: CollaboratorMap;
   /*generated*/ createdTime: number;
   /*generated*/ id?: string;
   name: string;
@@ -137,6 +138,10 @@ export interface Storage {
   removeApp(accountId: string, appId: string): Promise<void>;
   transferApp(accountId: string, appId: string, email: string): Promise<void>;
   updateApp(accountId: string, app: App): Promise<void>;
+
+  addCollaborator(accountId: string, appId: string, email: string): Promise<void>;
+  getCollaborators(accountId: string, appId: string): Promise<CollaboratorMap>;
+  removeCollaborator(accountId: string, appId: string, email: string): Promise<void>;
 
   addDeployment(accountId: string, appId: string, deployment: Deployment): Promise<string>;
   getDeployment(accountId: string, appId: string, deploymentId: string): Promise<Deployment>;
