@@ -37,13 +37,11 @@ export interface StorageError extends error.CodePushError {
  * Specifies an account with the power to manage apps, deployments and packages
  */
 export interface Account {
-  azureAdId?: string;
+  gitHubId: string;
+  /*const*/ name: string;
   /*generated*/ createdTime: number;
   /*const*/ email: string;
-  gitHubId?: string;
   /*generated*/ id?: string;
-  microsoftId?: string;
-  /*const*/ name: string;
 }
 
 export interface CollaboratorProperties {
@@ -57,7 +55,6 @@ export interface CollaboratorMap {
 }
 
 export interface App {
-  /*generated*/ collaborators?: CollaboratorMap;
   /*generated*/ createdTime: number;
   /*generated*/ id?: string;
   name: string;
@@ -141,10 +138,6 @@ export interface Storage {
   transferApp(accountId: string, appId: string, email: string): Promise<void>;
   updateApp(accountId: string, app: App): Promise<void>;
 
-  addCollaborator(accountId: string, appId: string, email: string): Promise<void>;
-  getCollaborators(accountId: string, appId: string): Promise<CollaboratorMap>;
-  removeCollaborator(accountId: string, appId: string, email: string): Promise<void>;
-
   addDeployment(accountId: string, appId: string, deployment: Deployment): Promise<string>;
   getDeployment(accountId: string, appId: string, deploymentId: string): Promise<Deployment>;
   getDeploymentInfo(deploymentKey: string): Promise<DeploymentInfo>;
@@ -153,12 +146,12 @@ export interface Storage {
   updateDeployment(accountId: string, appId: string, deployment: Deployment): Promise<void>;
 
   commitPackage(accountId: string, appId: string, deploymentId: string, appPackage: Package): Promise<Package>;
-  clearPackageHistory(accountId: string, appId: string, deploymentId: string): Promise<void>;
+  clearPackageHistory(accountId: string): Promise<void>;
   getPackageHistoryFromDeploymentKey(deploymentKey: string): Promise<Package[]>;
-  getPackageHistory(accountId: string, appId: string, deploymentId: string): Promise<Package[]>;
-  updatePackageHistory(accountId: string, appId: string, deploymentId: string, history: Package[]): Promise<void>;
+  getPackageHistory(deploymentId: string): Promise<Package[]>;
+  updatePackageHistory(deploymentId: string, history: Package[]): Promise<void>;
 
-  addBlob(blobId: string, addstream: stream.Readable, streamLength: number): Promise<string>;
+  addBlob(blobId: string, addstream: stream.Readable): Promise<string>;
   getBlobUrl(blobId: string): Promise<string>;
   removeBlob(blobId: string): Promise<void>;
 
@@ -201,7 +194,7 @@ export function getOwnerEmail(app: App): string {
 }
 
 export function isPrototypePollutionKey(key: string): boolean {
-  return ['__proto__', 'constructor', 'prototype'].includes(key);
+  return ["__proto__", "constructor", "prototype"].includes(key);
 }
 
 export function storageError(errorCode: ErrorCode, message?: string): StorageError {

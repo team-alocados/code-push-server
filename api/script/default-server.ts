@@ -2,21 +2,20 @@
 // Licensed under the MIT License.
 
 import * as api from "./api";
+
 import { fileUploadMiddleware } from "./file-upload-manager";
-import { JsonStorage } from "./storage/json-storage";
 import { RedisManager } from "./redis-manager";
+
 import { Storage } from "./storage/storage";
+import { S3Storage } from "./storage/s3-storage";
+
 import { Response } from "express";
 
 import * as bodyParser from "body-parser";
-const domain = require("express-domain-middleware");
 import * as express from "express";
 import * as q from "q";
 
-interface Secret {
-  id: string;
-  value: string;
-}
+const domain = require("express-domain-middleware");
 
 function bodyParserErrorHandler(err: any, req: express.Request, res: express.Response, next: Function): void {
   if (err) {
@@ -32,7 +31,7 @@ function bodyParserErrorHandler(err: any, req: express.Request, res: express.Res
 }
 
 export function start(done: (err?: any, server?: express.Express, storage?: Storage) => void): void {
-  let storage: Storage = new JsonStorage();
+  const storage: Storage = new S3Storage();
 
   q<void>(null)
     .then(() => {
