@@ -22,7 +22,6 @@ function merge(original: any, updates: any): void {
   }
 }
 
-// TODO 각 메소드 별 파라미터 type 점검하기
 export class S3Storage implements storage.Storage {
   public static NextIdNumber: number = 0;
 
