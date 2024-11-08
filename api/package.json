@@ -22,6 +22,8 @@
   },
   "author": "Microsoft",
   "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.687.0",
+    "@aws-sdk/client-s3": "^3.687.0",
     "applicationinsights": "^2.7.0",
     "body-parser": "^1.20.2",
     "cookie-session": "^2.0.0",
@@ -45,6 +47,7 @@
     "streamifier": "0.1.1",
     "superagent": "^8.0.9",
     "try-json": "1.0.0",
+    "uuid": "^11.0.2",
     "yauzl": "2.6.0",
     "yazl": "2.2.2"
   },
