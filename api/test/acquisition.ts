@@ -123,12 +123,12 @@ describe("Acquisition Rest API", () => {
 
   describe("Get /health", () => {
     it("should be healthy if and only if correctly configured", (done) => {
-      var isProductionReady: boolean = redisManager && redisManager.isEnabled;
-      var expectedStatusCode: number = isProductionReady ? 200 : 500;
+      const isProductionReady: boolean = redisManager && redisManager.isEnabled;
+      const expectedStatusCode: number = isProductionReady ? 200 : 500;
       request(server || serverUrl)
         .get("/health")
         .expect(expectedStatusCode)
-        .end(function (err: any, result: any) {
+        .end(function (err: any) {
           if (err) throw err;
           done();
         });
@@ -151,7 +151,7 @@ describe("Acquisition Rest API", () => {
       request(server || serverUrl)
         .get("/updateCheck")
         .expect(400)
-        .end(function (err: any, result: any) {
+        .end(function (err: any) {
           if (err) throw err;
           done();
         });
@@ -167,7 +167,7 @@ describe("Acquisition Rest API", () => {
             })
         )
         .expect(400)
-        .end(function (err: any, result: any) {
+        .end(function (err: any) {
           if (err) throw err;
           done();
         });
@@ -183,7 +183,7 @@ describe("Acquisition Rest API", () => {
             })
         )
         .expect(400)
-        .end(function (err: any, result: any) {
+        .end(function (err: any) {
           if (err) throw err;
           done();
         });
@@ -201,7 +201,7 @@ describe("Acquisition Rest API", () => {
             })
         )
         .expect(400)
-        .end(function (err: any, result: any) {
+        .end(function (err: any) {
           if (err) throw err;
           done();
         });
@@ -218,7 +218,7 @@ describe("Acquisition Rest API", () => {
             })
         )
         .expect(404)
-        .end(function (err: any, result: any) {
+        .end(function (err: any) {
           if (err) throw err;
           done();
         });
@@ -235,7 +235,7 @@ describe("Acquisition Rest API", () => {
             })
         )
         .expect(400)
-        .end(function (err: any, result: any) {
+        .end(function (err: any) {
           if (err) throw err;
           done();
         });
@@ -254,7 +254,7 @@ describe("Acquisition Rest API", () => {
         .expect(200)
         .end(function (err: any, result: any) {
           if (err) throw err;
-          var response = JSON.parse(result.text);
+          const response = JSON.parse(result.text);
           assert.equal(response.updateInfo.isAvailable, true);
           assert.equal(response.updateInfo.downloadURL, appPackage.blobUrl);
           assert.equal(response.updateInfo.packageSize, 6);
@@ -275,7 +275,7 @@ describe("Acquisition Rest API", () => {
         .expect(200)
         .end(function (err: any, result: any) {
           if (err) throw err;
-          var response = JSON.parse(result.text);
+          const response = JSON.parse(result.text);
           assert.equal(response.updateInfo.isAvailable, true);
           assert.equal(response.updateInfo.downloadURL, appPackage.blobUrl);
           assert.equal(response.updateInfo.packageSize, 6);
@@ -297,7 +297,7 @@ describe("Acquisition Rest API", () => {
         .expect(200)
         .end(function (err: any, result: any) {
           if (err) throw err;
-          var response = JSON.parse(result.text);
+          const response = JSON.parse(result.text);
           // Semver ignores build metadata when matching against ranges
           assert.equal(response.updateInfo.isAvailable, true);
           assert.equal(response.updateInfo.downloadURL, appPackage.blobUrl);
@@ -320,7 +320,7 @@ describe("Acquisition Rest API", () => {
         .expect(200)
         .end(function (err: any, result: any) {
           if (err) throw err;
-          var response = JSON.parse(result.text);
+          const response = JSON.parse(result.text);
           // Semver pre-release tags don't match ranges unless explicitly specified
           assert.equal(response.updateInfo.isAvailable, false);
           assert.equal(response.updateInfo.updateAppVersion, true);
@@ -341,7 +341,7 @@ describe("Acquisition Rest API", () => {
         .expect(200)
         .end(function (err: any, result: any) {
           if (err) throw err;
-          var response = JSON.parse(result.text);
+          const response = JSON.parse(result.text);
           assert.equal(response.updateInfo.isAvailable, true);
           assert.equal(response.updateInfo.downloadURL, appPackage.blobUrl);
           assert.equal(response.updateInfo.packageSize, 6);
@@ -366,7 +366,7 @@ describe("Acquisition Rest API", () => {
         .expect(200)
         .end(function (err: any, result: any) {
           if (err) throw err;
-          var response = JSON.parse(result.text);
+          const response = JSON.parse(result.text);
           assert.equal(response.updateInfo.isAvailable, true);
           assert.equal(response.updateInfo.downloadURL, appPackage.blobUrl);
           assert.equal(response.updateInfo.packageSize, 6);
@@ -391,7 +391,7 @@ describe("Acquisition Rest API", () => {
         .expect(200)
         .end(function (err: any, result: any) {
           if (err) throw err;
-          var response = JSON.parse(result.text);
+          const response = JSON.parse(result.text);
           assert.equal(response.updateInfo.isAvailable, true);
           assert.equal(response.updateInfo.downloadURL, appPackage.diffPackageMap[previousPackageHash].url);
           assert.equal(response.updateInfo.packageSize, 5);
@@ -413,7 +413,7 @@ describe("Acquisition Rest API", () => {
         .expect(200)
         .end(function (err: any, result: any) {
           if (err) throw err;
-          var response = JSON.parse(result.text);
+          const response = JSON.parse(result.text);
           assert.equal(response.updateInfo.isAvailable, true);
           assert.equal(response.updateInfo.downloadURL, appPackage.blobUrl);
           assert.equal(response.updateInfo.packageSize, 6);
@@ -439,7 +439,7 @@ describe("Acquisition Rest API", () => {
         .expect(200)
         .end(function (err: any, result: any) {
           if (err) throw err;
-          var response = JSON.parse(result.text);
+          const response = JSON.parse(result.text);
           assert.equal(response.updateInfo.isAvailable, true);
           assert.equal(response.updateInfo.downloadURL, appPackage.diffPackageMap[previousPackageHash].url);
           assert.equal(response.updateInfo.packageSize, 5);
@@ -465,7 +465,7 @@ describe("Acquisition Rest API", () => {
         .expect(200)
         .end(function (err: any, result: any) {
           if (err) throw err;
-          var response = JSON.parse(result.text);
+          const response = JSON.parse(result.text);
           assert.equal(response.updateInfo.isAvailable, true);
           assert.equal(response.updateInfo.downloadURL, appPackage.blobUrl);
           assert.equal(response.updateInfo.packageSize, 6);
@@ -489,7 +489,7 @@ describe("Acquisition Rest API", () => {
         .expect(200)
         .end(function (err: any, result: any) {
           if (err) throw err;
-          var response = JSON.parse(result.text);
+          const response = JSON.parse(result.text);
           assert.equal(response.updateInfo.isAvailable, false);
           assert.equal(response.updateInfo.updateAppVersion, true);
           assert.equal(response.updateInfo.appVersion, appPackage.appVersion);
@@ -511,7 +511,7 @@ describe("Acquisition Rest API", () => {
         .expect(200)
         .end(function (err: any, result: any) {
           if (err) throw err;
-          var response = JSON.parse(result.text);
+          const response = JSON.parse(result.text);
           assert.equal(response.updateInfo.isAvailable, false);
           assert.equal(response.updateInfo.shouldRunBinaryVersion, true);
           assert.equal(response.updateInfo.updateAppVersion, false);
@@ -533,7 +533,7 @@ describe("Acquisition Rest API", () => {
         .expect(200)
         .end(function (err: any, result: any) {
           if (err) throw err;
-          var response = JSON.parse(result.text);
+          const response = JSON.parse(result.text);
           assert.equal(response.updateInfo.isAvailable, true);
           assert.equal(response.updateInfo.downloadURL, appPackage.blobUrl);
           assert.equal(response.updateInfo.packageSize, 6);
@@ -556,7 +556,7 @@ describe("Acquisition Rest API", () => {
         .expect(200)
         .end(function (err: any, result: any) {
           if (err) throw err;
-          var response = JSON.parse(result.text);
+          const response = JSON.parse(result.text);
           assert.equal(response.updateInfo.isAvailable, false);
           assert.equal(response.updateInfo.updateAppVersion, true);
           assert.equal(response.updateInfo.appVersion, appPackage.appVersion);
@@ -579,7 +579,7 @@ describe("Acquisition Rest API", () => {
         .expect(200)
         .end(function (err: any, result: any) {
           if (err) throw err;
-          var response = JSON.parse(result.text);
+          const response = JSON.parse(result.text);
           assert.equal(response.updateInfo.isAvailable, false);
           assert.equal(response.updateInfo.shouldRunBinaryVersion, true);
           assert.equal(response.updateInfo.updateAppVersion, false);
@@ -604,7 +604,7 @@ describe("Acquisition Rest API", () => {
         .expect(200)
         .end(function (err: any, result: any) {
           if (err) throw err;
-          var response = JSON.parse(result.text);
+          const response = JSON.parse(result.text);
           assert.equal(response.updateInfo.isAvailable, true);
           assert.equal(response.updateInfo.downloadURL, appPackage.blobUrl);
           assert.equal(response.updateInfo.packageSize, 6);
@@ -628,7 +628,7 @@ describe("Acquisition Rest API", () => {
         .expect(200)
         .end(function (err: any, result: any) {
           if (err) throw err;
-          var response = JSON.parse(result.text);
+          const response = JSON.parse(result.text);
           assert.equal(response.updateInfo.isAvailable, true);
           assert.equal(response.updateInfo.downloadURL, appPackage.blobUrl);
           assert.equal(response.updateInfo.packageSize, 6);
@@ -1051,11 +1051,11 @@ describe("Acquisition Rest API", () => {
             return storageInstance.commitPackage(account2.id, app2.id, deployment2.id, deployment2.package);
           })
           .then(() => {
-            return storageInstance.getPackageHistory(account2.id, app2.id, deployment2.id);
+            return storageInstance.getPackageHistory(deployment2.id);
           })
           .then((packageHistory: storage.Package[]) => {
             packageHistory[2].isDisabled = true;
-            return storageInstance.updatePackageHistory(account2.id, app2.id, deployment2.id, packageHistory);
+            return storageInstance.updatePackageHistory(deployment2.id, packageHistory);
           });
       });
 

@@ -489,7 +489,7 @@ export class JsonStorage implements storage.Storage {
     return q(clone(appPackage));
   }
 
-  public clearPackageHistory(accountId: string, appId: string, deploymentId: string): Promise<void> {
+  public clearPackageHistory(deploymentId: string): Promise<void> {
     const deployment: storage.Deployment = this.deployments[deploymentId];
     if (!deployment) {
       return JsonStorage.getRejectedPromise(storage.ErrorCode.NotFound);
@@ -502,7 +502,7 @@ export class JsonStorage implements storage.Storage {
     return q(<void>null);
   }
 
-  public getPackageHistory(accountId: string, appId: string, deploymentId: string): Promise<storage.Package[]> {
+  public getPackageHistory(deploymentId: string): Promise<storage.Package[]> {
     const deployment: any = <any>this.deployments[deploymentId];
     if (!deployment) {
       return JsonStorage.getRejectedPromise(storage.ErrorCode.NotFound);
@@ -511,7 +511,7 @@ export class JsonStorage implements storage.Storage {
     return q(clone(deployment.packageHistory));
   }
 
-  public updatePackageHistory(accountId: string, appId: string, deploymentId: string, history: storage.Package[]): Promise<void> {
+  public updatePackageHistory(deploymentId: string, history: storage.Package[]): Promise<void> {
     if (!history || !history.length) {
       return JsonStorage.getRejectedPromise(storage.ErrorCode.Invalid, "Cannot clear package history from an update operation");
     }
@@ -528,7 +528,7 @@ export class JsonStorage implements storage.Storage {
     return q(<void>null);
   }
 
-  public addBlob(blobId: string, stream: stream.Readable, streamLength: number): Promise<string> {
+  public addBlob(blobId: string, stream: stream.Readable): Promise<string> {
     this.blobs[blobId] = "";
     return q.Promise<string>((resolve: (blobId: string) => void) => {
       stream

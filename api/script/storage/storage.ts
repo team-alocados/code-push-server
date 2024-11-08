@@ -37,7 +37,7 @@ export interface StorageError extends error.CodePushError {
  * Specifies an account with the power to manage apps, deployments and packages
  */
 export interface Account {
-  gitHubId: string;
+  gitHubId?: string;
   /*const*/ name: string;
   /*generated*/ createdTime: number;
   /*const*/ email: string;
