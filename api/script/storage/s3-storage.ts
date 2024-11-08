@@ -830,6 +830,8 @@ export class S3Storage implements storage.Storage {
 
   /**
    * 새로운 ObjectId 생성
+   *
+   * // TODO uuid로 대체
    */
   private generateNewId(): string {
     const id = "id_" + S3Storage.NextIdNumber;
