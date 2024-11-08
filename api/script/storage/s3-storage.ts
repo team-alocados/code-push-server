@@ -650,7 +650,12 @@ export class S3Storage implements storage.Storage {
    */
   public getBlobUrl(blobId: string): Promise<string> {
     return this.getBlobServer().then((server: http.Server) => {
-      return server.address() + "/" + blobId;
+      const addr = server.address();
+      if (typeof addr === "string") {
+        return addr + "/" + blobId;
+      }
+      // addr가 객체인 경우 적절한 URL 형식으로 변환
+      return `http://172.30.1.86:${addr.port}/${blobId}`;
     });
   }
 
