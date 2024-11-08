@@ -131,7 +131,7 @@ export function getManagementRouter(config: ManagementConfig): Router {
         }
 
         const storageAccessKey: storageTypes.AccessKey = converterUtils.toStorageAccessKey(accessKey);
-        return storage.addAccessKey(accountId, storageAccessKey).then((id: string): void => {
+        return storage.addAccessKey(accountId, storageAccessKey).then((): void => {
           res.setHeader("Location", urlEncode([`/accessKeys/${accessKey.friendlyName}`]));
           res.status(201).send({ accessKey: accessKey });
         });
@@ -324,6 +324,7 @@ export function getManagementRouter(config: ManagementConfig): Router {
       .resolveApp(accountId, appName)
       .then((app: storageTypes.App) => {
         storageApp = app;
+        throwIfInvalidPermissions(app, storageTypes.Permissions.Owner);
         return storage.getDeployments(accountId, app.id);
       })
       .then((deployments: storageTypes.Deployment[]) => {
@@ -344,7 +345,6 @@ export function getManagementRouter(config: ManagementConfig): Router {
       .resolveApp(accountId, appName)
       .then((app: storageTypes.App) => {
         appId = app.id;
-        throwIfInvalidPermissions(app, storageTypes.Permissions.Owner);
         return storage.getDeployments(accountId, appId);
       })
       .then((deployments: storageTypes.Deployment[]) => {
@@ -380,6 +380,7 @@ export function getManagementRouter(config: ManagementConfig): Router {
           errorUtils.sendNotFoundError(res, `App "${appName}" does not exist.`);
           return;
         }
+
         throwIfInvalidPermissions(existingApp, storageTypes.Permissions.Owner);
 
         if ((app.name || app.name === "") && app.name !== existingApp.name) {
@@ -542,7 +543,7 @@ export function getManagementRouter(config: ManagementConfig): Router {
       .resolveApp(accountId, appName)
       .then((app: storageTypes.App) => {
         appId = app.id;
-        throwIfInvalidPermissions(app, storageTypes.Permissions.Owner);
+        throwIfInvalidPermissions(app, storageTypes.Permissions.Collaborator);
         return storage.getDeployments(accountId, app.id);
       })
       .then((deployments: storageTypes.Deployment[]): void | Promise<void> => {
@@ -554,7 +555,7 @@ export function getManagementRouter(config: ManagementConfig): Router {
         // Allow the deployment key to be specified on creation, if desired
         storageDeployment.key = restDeployment.key || security.generateSecureKey(accountId);
 
-        return storage.addDeployment(accountId, appId, storageDeployment).then((deploymentId: string): void => {
+        return storage.addDeployment(accountId, appId, storageDeployment).then(() => {
           restDeployment = converterUtils.toRestDeployment(storageDeployment);
           res.setHeader("Location", urlEncode([`/apps/${appName}/deployments/${restDeployment.name}`]));
           res.status(201).send({ deployment: restDeployment });
@@ -671,12 +672,10 @@ export function getManagementRouter(config: ManagementConfig): Router {
 
     let updateRelease: boolean = false;
     let storageDeployment: storageTypes.Deployment;
-    let appId: string;
 
     nameResolver
       .resolveApp(accountId, appName)
       .then((app: storageTypes.App) => {
-        appId = app.id;
         throwIfInvalidPermissions(app, storageTypes.Permissions.Collaborator);
         return storage.getDeployments(accountId, app.id);
       })
@@ -687,7 +686,7 @@ export function getManagementRouter(config: ManagementConfig): Router {
           throw errorUtils.restError(errorUtils.ErrorCode.NotFound, `Deployment "${deploymentName}" does not exist.`);
         }
 
-        return storage.getPackageHistory(accountId, appId, storageDeployment.id);
+        return storage.getPackageHistory(storageDeployment.id);
       })
       .then((packageHistory: storageTypes.Package[]) => {
         if (!packageHistory.length) {
@@ -743,7 +742,7 @@ export function getManagementRouter(config: ManagementConfig): Router {
         }
 
         if (updateRelease) {
-          return storage.updatePackageHistory(accountId, appId, storageDeployment.id, packageHistory).then(() => {
+          return storage.updatePackageHistory(storageDeployment.id, packageHistory).then(() => {
             res.send({ package: converterUtils.toRestPackage(packageToUpdate) });
             return invalidateCachedPackage(storageDeployment.key);
           });
@@ -760,141 +759,145 @@ export function getManagementRouter(config: ManagementConfig): Router {
     max: 100, // limit each IP to 100 requests per windowMs
   });
 
-  router.post("/apps/:appName/deployments/:deploymentName/release", releaseRateLimiter, (req: Request, res: Response, next: (err?: any) => void): any => {
-    const accountId: string = req.user.id;
-    const appName: string = req.params.appName;
-    const deploymentName: string = req.params.deploymentName;
-    const file: any = getFileWithField(req, "package");
+  router.post(
+    "/apps/:appName/deployments/:deploymentName/release",
+    releaseRateLimiter,
+    (req: Request, res: Response, next: (err?: any) => void): any => {
+      const accountId: string = req.user.id;
+      const appName: string = req.params.appName;
+      const deploymentName: string = req.params.deploymentName;
+      const file: any = getFileWithField(req, "package");
 
-    if (!file || !file.buffer) {
-      errorUtils.sendMalformedRequestError(res, "A deployment package must include a file.");
-      return;
-    }
-
-    const filePath: string = createTempFileFromBuffer(file.buffer);
-    const restPackage: restTypes.Package = tryJSON(req.body.packageInfo) || {};
-    const validationErrors: validationUtils.ValidationError[] = validationUtils.validatePackageInfo(
-      restPackage,
-      /*allOptional*/ false
-    );
-    if (validationErrors.length) {
-      errorUtils.sendMalformedRequestError(res, JSON.stringify(validationErrors));
-      return;
-    }
-
-    fs.stat(filePath, (err: NodeJS.ErrnoException, stats: fs.Stats): void => {
-      if (err) {
-        errorUtils.sendUnknownError(res, err, next);
+      if (!file || !file.buffer) {
+        errorUtils.sendMalformedRequestError(res, "A deployment package must include a file.");
         return;
       }
 
-      // These variables are for hoisting promise results and flattening the following promise chain.
-      let appId: string;
-      let deploymentToReleaseTo: storageTypes.Deployment;
-      let storagePackage: storageTypes.Package;
-      let lastPackageHashWithSameAppVersion: string;
-      let newManifest: PackageManifest;
+      const filePath: string = createTempFileFromBuffer(file.buffer);
+      const restPackage: restTypes.Package = tryJSON(req.body.packageInfo) || {};
+      const validationErrors: validationUtils.ValidationError[] = validationUtils.validatePackageInfo(
+        restPackage,
+        /*allOptional*/ false
+      );
+      if (validationErrors.length) {
+        errorUtils.sendMalformedRequestError(res, JSON.stringify(validationErrors));
+        return;
+      }
 
-      nameResolver
-        .resolveApp(accountId, appName)
-        .then((app: storageTypes.App) => {
-          appId = app.id;
-          throwIfInvalidPermissions(app, storageTypes.Permissions.Collaborator);
-          return nameResolver.resolveDeployment(accountId, appId, deploymentName);
-        })
-        .then((deployment: storageTypes.Deployment) => {
-          deploymentToReleaseTo = deployment;
-          const existingPackage: storageTypes.Package = deployment.package;
-          if (existingPackage && isUnfinishedRollout(existingPackage.rollout) && !existingPackage.isDisabled) {
-            throw errorUtils.restError(
-              errorUtils.ErrorCode.Conflict,
-              "Please update the previous release to 100% rollout before releasing a new package."
-            );
-          }
+      fs.stat(filePath, (err: NodeJS.ErrnoException, stats: fs.Stats): void => {
+        if (err) {
+          errorUtils.sendUnknownError(res, err, next);
+          return;
+        }
 
-          return storage.getPackageHistory(accountId, appId, deploymentToReleaseTo.id);
-        })
-        .then((history: storageTypes.Package[]) => {
-          lastPackageHashWithSameAppVersion = getLastPackageHashWithSameAppVersion(history, restPackage.appVersion);
-          return hashUtils.generatePackageManifestFromZip(filePath);
-        })
-        .then((manifest?: PackageManifest) => {
-          if (manifest) {
-            newManifest = manifest;
-            // If update is a zip, generate a packageHash using the manifest, since
-            // that more accurately represents the contents of each file in the zip.
-            return newManifest.computePackageHash();
-          } else {
-            // Update is not a zip (flat file), generate the packageHash over the
-            // entire file contents.
-            return hashUtils.hashFile(filePath);
-          }
-        })
-        .then((packageHash: string) => {
-          restPackage.packageHash = packageHash;
-          if (restPackage.packageHash === lastPackageHashWithSameAppVersion) {
-            throw errorUtils.restError(
-              errorUtils.ErrorCode.Conflict,
-              "The uploaded package was not released because it is identical to the contents of the specified deployment's current release."
-            );
-          }
+        // These variables are for hoisting promise results and flattening the following promise chain.
+        let appId: string;
+        let deploymentToReleaseTo: storageTypes.Deployment;
+        let storagePackage: storageTypes.Package;
+        let lastPackageHashWithSameAppVersion: string;
+        let newManifest: PackageManifest;
 
-          return storage.addBlob(security.generateSecureKey(accountId), fs.createReadStream(filePath), stats.size);
-        })
-        .then((blobId: string) => storage.getBlobUrl(blobId))
-        .then((blobUrl: string) => {
-          restPackage.blobUrl = blobUrl;
-          restPackage.size = stats.size;
-
-          // If newManifest is null/undefined, then the package is not a valid ZIP file.
-          if (newManifest) {
-            const json: string = newManifest.serialize();
-            const readStream: stream.Readable = streamifier.createReadStream(json);
-
-            return storage.addBlob(security.generateSecureKey(accountId), readStream, json.length);
-          }
-
-          return q(<string>null);
-        })
-        .then((blobId?: string) => {
-          if (blobId) {
-            return storage.getBlobUrl(blobId);
-          }
-
-          return q(<string>null);
-        })
-        .then((manifestBlobUrl?: string) => {
-          storagePackage = converterUtils.toStoragePackage(restPackage);
-          if (manifestBlobUrl) {
-            storagePackage.manifestBlobUrl = manifestBlobUrl;
-          }
-
-          storagePackage.releaseMethod = storageTypes.ReleaseMethod.Upload;
-          storagePackage.uploadTime = new Date().getTime();
-          return storage.commitPackage(accountId, appId, deploymentToReleaseTo.id, storagePackage);
-        })
-        .then((committedPackage: storageTypes.Package): Promise<void> => {
-          storagePackage.label = committedPackage.label;
-          const restPackage: restTypes.Package = converterUtils.toRestPackage(committedPackage);
-
-          res.setHeader("Location", urlEncode([`/apps/${appName}/deployments/${deploymentName}`]));
-          res.status(201).send({ package: restPackage }); // Send response without blocking on cleanup
-
-          return invalidateCachedPackage(deploymentToReleaseTo.key);
-        })
-        .then(() => processDiff(accountId, appId, deploymentToReleaseTo.id, storagePackage))
-        .finally((): void => {
-          // Cleanup; any errors before this point will still pass to the catch() block
-          fs.unlink(filePath, (err: NodeJS.ErrnoException): void => {
-            if (err) {
-              errorUtils.sendUnknownError(res, err, next);
+        nameResolver
+          .resolveApp(accountId, appName)
+          .then((app: storageTypes.App) => {
+            appId = app.id;
+            throwIfInvalidPermissions(app, storageTypes.Permissions.Collaborator);
+            return nameResolver.resolveDeployment(accountId, appId, deploymentName);
+          })
+          .then((deployment: storageTypes.Deployment) => {
+            deploymentToReleaseTo = deployment;
+            const existingPackage: storageTypes.Package = deployment.package;
+            if (existingPackage && isUnfinishedRollout(existingPackage.rollout) && !existingPackage.isDisabled) {
+              throw errorUtils.restError(
+                errorUtils.ErrorCode.Conflict,
+                "Please update the previous release to 100% rollout before releasing a new package."
+              );
             }
-          });
-        })
-        .catch((error: error.CodePushError) => errorUtils.restErrorHandler(res, error, next))
-        .done();
-    });
-  });
+
+            return storage.getPackageHistory(deploymentToReleaseTo.id);
+          })
+          .then((history: storageTypes.Package[]) => {
+            lastPackageHashWithSameAppVersion = getLastPackageHashWithSameAppVersion(history, restPackage.appVersion);
+            return hashUtils.generatePackageManifestFromZip(filePath);
+          })
+          .then((manifest?: PackageManifest) => {
+            if (manifest) {
+              newManifest = manifest;
+              // If update is a zip, generate a packageHash using the manifest, since
+              // that more accurately represents the contents of each file in the zip.
+              return newManifest.computePackageHash();
+            } else {
+              // Update is not a zip (flat file), generate the packageHash over the
+              // entire file contents.
+              return hashUtils.hashFile(filePath);
+            }
+          })
+          .then((packageHash: string) => {
+            restPackage.packageHash = packageHash;
+            if (restPackage.packageHash === lastPackageHashWithSameAppVersion) {
+              throw errorUtils.restError(
+                errorUtils.ErrorCode.Conflict,
+                "The uploaded package was not released because it is identical to the contents of the specified deployment's current release."
+              );
+            }
+
+            return storage.addBlob(security.generateSecureKey(accountId), fs.createReadStream(filePath));
+          })
+          .then((blobId: string) => storage.getBlobUrl(blobId))
+          .then((blobUrl: string) => {
+            restPackage.blobUrl = blobUrl;
+            restPackage.size = stats.size;
+
+            // If newManifest is null/undefined, then the package is not a valid ZIP file.
+            if (newManifest) {
+              const json: string = newManifest.serialize();
+              const readStream: stream.Readable = streamifier.createReadStream(json);
+
+              return storage.addBlob(security.generateSecureKey(accountId), readStream);
+            }
+
+            return q(<string>null);
+          })
+          .then((blobId?: string) => {
+            if (blobId) {
+              return storage.getBlobUrl(blobId);
+            }
+
+            return q(<string>null);
+          })
+          .then((manifestBlobUrl?: string) => {
+            storagePackage = converterUtils.toStoragePackage(restPackage);
+            if (manifestBlobUrl) {
+              storagePackage.manifestBlobUrl = manifestBlobUrl;
+            }
+
+            storagePackage.releaseMethod = storageTypes.ReleaseMethod.Upload;
+            storagePackage.uploadTime = new Date().getTime();
+            return storage.commitPackage(accountId, appId, deploymentToReleaseTo.id, storagePackage);
+          })
+          .then((committedPackage: storageTypes.Package): Promise<void> => {
+            storagePackage.label = committedPackage.label;
+            const restPackage: restTypes.Package = converterUtils.toRestPackage(committedPackage);
+
+            res.setHeader("Location", urlEncode([`/apps/${appName}/deployments/${deploymentName}`]));
+            res.status(201).send({ package: restPackage }); // Send response without blocking on cleanup
+
+            return invalidateCachedPackage(deploymentToReleaseTo.key);
+          })
+          .then(() => processDiff(accountId, appId, deploymentToReleaseTo.id, storagePackage))
+          .finally((): void => {
+            // Cleanup; any errors before this point will still pass to the catch() block
+            fs.unlink(filePath, (err: NodeJS.ErrnoException): void => {
+              if (err) {
+                errorUtils.sendUnknownError(res, err, next);
+              }
+            });
+          })
+          .catch((error: error.CodePushError) => errorUtils.restErrorHandler(res, error, next))
+          .done();
+      });
+    }
+  );
 
   router.delete(
     "/apps/:appName/deployments/:deploymentName/history",
@@ -914,7 +917,7 @@ export function getManagementRouter(config: ManagementConfig): Router {
         })
         .then((deployment: storageTypes.Deployment): Promise<void> => {
           deploymentToGetHistoryOf = deployment;
-          return storage.clearPackageHistory(accountId, appId, deploymentToGetHistoryOf.id);
+          return storage.clearPackageHistory(accountId);
         })
         .then(() => {
           if (redisManager.isEnabled) {
@@ -945,8 +948,8 @@ export function getManagementRouter(config: ManagementConfig): Router {
         throwIfInvalidPermissions(app, storageTypes.Permissions.Collaborator);
         return nameResolver.resolveDeployment(accountId, appId, deploymentName);
       })
-      .then((deployment: storageTypes.Deployment): Promise<storageTypes.Package[]> => {
-        return storage.getPackageHistory(accountId, appId, deployment.id);
+      .then((): Promise<storageTypes.Package[]> => {
+        return storage.getPackageHistory(accountId);
       })
       .then((packageHistory: storageTypes.Package[]) => {
         res.send({ history: packageHistory });
@@ -1016,7 +1019,7 @@ export function getManagementRouter(config: ManagementConfig): Router {
           destDeployment = destinationDeployment;
 
           if (info.label) {
-            return storage.getPackageHistory(accountId, appId, sourceDeployment.id).then((sourceHistory: storageTypes.Package[]) => {
+            return storage.getPackageHistory(sourceDeployment.id).then((sourceHistory: storageTypes.Package[]) => {
               sourcePackage = getPackageFromLabel(sourceHistory, info.label);
             });
           } else {
@@ -1040,7 +1043,7 @@ export function getManagementRouter(config: ManagementConfig): Router {
             );
           }
 
-          return storage.getPackageHistory(accountId, appId, destDeployment.id);
+          return storage.getPackageHistory(destDeployment.id);
         })
         .then((destHistory: storageTypes.Package[]) => {
           if (sourcePackage.packageHash === getLastPackageHashWithSameAppVersion(destHistory, sourcePackage.appVersion)) {
@@ -1103,7 +1106,7 @@ export function getManagementRouter(config: ManagementConfig): Router {
         })
         .then((deployment: storageTypes.Deployment): Promise<storageTypes.Package[]> => {
           deploymentToRollback = deployment;
-          return storage.getPackageHistory(accountId, appId, deployment.id);
+          return storage.getPackageHistory(deployment.id);
         })
         .then((packageHistory: storageTypes.Package[]) => {
           const sourcePackage: storageTypes.Package =
@@ -1183,30 +1186,6 @@ export function getManagementRouter(config: ManagementConfig): Router {
     return redisManager.invalidateCache(redis.Utilities.getDeploymentKeyHash(deploymentKey));
   }
 
-  function throwIfInvalidPermissions(app: storageTypes.App, requiredPermission: string): boolean {
-    const collaboratorsMap: storageTypes.CollaboratorMap = app.collaborators;
-
-    let isPermitted: boolean = false;
-
-    if (collaboratorsMap) {
-      for (const email of Object.keys(collaboratorsMap)) {
-        if ((<storageTypes.CollaboratorProperties>collaboratorsMap[email]).isCurrentAccount) {
-          const permission: string = collaboratorsMap[email].permission;
-          isPermitted = permission === storageTypes.Permissions.Owner || permission === requiredPermission;
-          break;
-        }
-      }
-    }
-
-    if (!isPermitted)
-      throw errorUtils.restError(
-        errorUtils.ErrorCode.Unauthorized,
-        "This action requires " + requiredPermission + " permissions on the app!"
-      );
-
-    return true;
-  }
-
   function getPackageFromLabel(history: storageTypes.Package[], label: string): storageTypes.Package {
     if (!history) {
       return null;
@@ -1258,7 +1237,7 @@ export function getManagementRouter(config: ManagementConfig): Router {
       .getApp(accountId, appId)
       .then((storageApp: storageTypes.App) => {
         throwIfInvalidPermissions(storageApp, storageTypes.Permissions.Collaborator);
-        return storage.getPackageHistory(accountId, appId, deploymentId);
+        return storage.getPackageHistory(deploymentId);
       })
       .then((history: storageTypes.Package[]) => {
         if (history) {
@@ -1271,7 +1250,7 @@ export function getManagementRouter(config: ManagementConfig): Router {
           }
 
           if (updateHistory) {
-            return storage.updatePackageHistory(accountId, appId, deploymentId, history);
+            return storage.updatePackageHistory(deploymentId, history);
           }
         }
       })
@@ -1301,6 +1280,30 @@ export function getManagementRouter(config: ManagementConfig): Router {
         console.log(`Package processed, adding diff info`);
         addDiffInfoForPackage(accountId, appId, deploymentId, appPackage, diffPackageMap);
       });
+  }
+
+  function throwIfInvalidPermissions(app: storageTypes.App, requiredPermission: string): boolean {
+    const collaboratorsMap: storageTypes.CollaboratorMap = app.collaborators;
+
+    let isPermitted: boolean = false;
+
+    if (collaboratorsMap) {
+      for (const email of Object.keys(collaboratorsMap)) {
+        if ((<storageTypes.CollaboratorProperties>collaboratorsMap[email]).isCurrentAccount) {
+          const permission: string = collaboratorsMap[email].permission;
+          isPermitted = permission === storageTypes.Permissions.Owner || permission === requiredPermission;
+          break;
+        }
+      }
+    }
+
+    if (!isPermitted)
+      throw errorUtils.restError(
+        errorUtils.ErrorCode.Unauthorized,
+        "This action requires " + requiredPermission + " permissions on the app!"
+      );
+
+    return true;
   }
 
   return router;

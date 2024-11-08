@@ -10,7 +10,6 @@ import * as passportWindowsLive from "passport-windowslive";
 import * as q from "q";
 import rateLimit from "express-rate-limit";
 
-import * as converterUtils from "../utils/converter";
 import * as restErrorUtils from "../utils/rest-error-handling";
 import * as restHeaders from "../utils/rest-headers";
 import * as security from "../utils/security";
@@ -217,12 +216,8 @@ export class PassportAuthentication {
 
   private static getProviderId(account: storage.Account, provider: string): string {
     switch (provider) {
-      case PassportAuthentication.AZURE_AD_PROVIDER_NAME:
-        return account.azureAdId;
       case PassportAuthentication.GITHUB_PROVIDER_NAME:
         return account.gitHubId;
-      case PassportAuthentication.MICROSOFT_PROVIDER_NAME:
-        return account.microsoftId;
       default:
         throw new Error("Unrecognized provider");
     }
@@ -230,14 +225,8 @@ export class PassportAuthentication {
 
   private static setProviderId(account: storage.Account, provider: string, id: string): void {
     switch (provider) {
-      case PassportAuthentication.AZURE_AD_PROVIDER_NAME:
-        account.azureAdId = id;
-        return;
       case PassportAuthentication.GITHUB_PROVIDER_NAME:
         account.gitHubId = id;
-        return;
-      case PassportAuthentication.MICROSOFT_PROVIDER_NAME:
-        account.microsoftId = id;
         return;
       default:
         throw new Error("Unrecognized provider");
@@ -327,7 +316,7 @@ export class PassportAuthentication {
             isSession: true,
           };
 
-          return this._storageInstance.addAccessKey(accountId, accessKey).then((accessKeyId: string): void => {
+          return this._storageInstance.addAccessKey(accountId, accessKey).then((): void => {
             const key: string = accessKey.name;
             req.session["accessKey"] = key;
             req.session["isNewAccount"] = action === "register";

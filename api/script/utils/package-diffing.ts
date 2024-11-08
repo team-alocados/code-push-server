@@ -55,7 +55,7 @@ export class PackageDiffer {
     }
 
     const manifestPromise: Promise<PackageManifest> = this.getManifest(newPackage);
-    const historyPromise: Promise<storageTypes.Package[]> = this._storage.getPackageHistory(accountId, appId, deploymentId);
+    const historyPromise: Promise<storageTypes.Package[]> = this._storage.getPackageHistory(deploymentId);
     const newReleaseFilePromise: Promise<string> = this.downloadArchiveFromUrl(newPackage.blobUrl);
     let newFilePath: string;
 
@@ -201,11 +201,7 @@ export class PackageDiffer {
 
   private uploadDiffArchiveBlob(blobId: string, diffArchiveFilePath: string): Promise<storageTypes.BlobInfo> {
     return Promise<storageTypes.BlobInfo>(
-      (
-        resolve: (value?: storageTypes.BlobInfo | Promise<storageTypes.BlobInfo>) => void,
-        reject: (reason: any) => void,
-        notify: (progress: any) => void
-      ): void => {
+      (resolve: (value?: storageTypes.BlobInfo | Promise<storageTypes.BlobInfo>) => void, reject: (reason: any) => void): void => {
         fs.stat(diffArchiveFilePath, (err: NodeJS.ErrnoException, stats: fs.Stats): void => {
           if (err) {
             reject(err);
@@ -215,7 +211,7 @@ export class PackageDiffer {
           const readable: fs.ReadStream = fs.createReadStream(diffArchiveFilePath);
 
           this._storage
-            .addBlob(blobId, readable, stats.size)
+            .addBlob(blobId, readable)
             .then((blobId: string): Promise<string> => {
               return this._storage.getBlobUrl(blobId);
             })

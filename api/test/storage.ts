@@ -239,8 +239,6 @@ function storageTests(StorageType: new (...args: any[]) => storageTypes.Storage,
           assert.equal(updatedAccount.name, account.name);
           assert.equal(updatedAccount.email, account.email);
           assert.equal(updatedAccount.gitHubId, "2");
-          assert(typeof updatedAccount.azureAdId === "undefined");
-          assert(typeof updatedAccount.microsoftId === "undefined");
         });
     });
 
@@ -762,7 +760,7 @@ function storageTests(StorageType: new (...args: any[]) => storageTypes.Storage,
         .addDeployment(account.id, app.id, deployment)
         .then((deploymentId: string) => {
           assert(deploymentId);
-          return storage.getPackageHistory(account.id, app.id, deploymentId);
+          return storage.getPackageHistory(deploymentId);
         })
         .then((history: storageTypes.Package[]) => {
           assert.equal(history.length, 0);
@@ -850,7 +848,7 @@ function storageTests(StorageType: new (...args: any[]) => storageTypes.Storage,
         })
         .then(failOnCallSucceeded, (error: storageTypes.StorageError) => {
           assert.equal(error.code, storageTypes.ErrorCode.NotFound);
-          return storage.getPackageHistory(account.id, app.id, deployment.id);
+          return storage.getPackageHistory(deployment.id);
         })
         .then(failOnCallSucceeded, (error: storageTypes.StorageError) => {
           assert.equal(error.code, storageTypes.ErrorCode.NotFound);
@@ -995,7 +993,7 @@ function storageTests(StorageType: new (...args: any[]) => storageTypes.Storage,
         .then((deploymentId: string) => {
           deployment.id = deploymentId;
           var fileContents = "test blob";
-          return storage.addBlob(shortid.generate(), utils.makeStreamFromString(fileContents), fileContents.length);
+          return storage.addBlob(shortid.generate(), utils.makeStreamFromString(fileContents));
         })
         .then((savedBlobId: string) => {
           blobId = savedBlobId;
@@ -1107,14 +1105,14 @@ function storageTests(StorageType: new (...args: any[]) => storageTypes.Storage,
       });
 
       it("can get package history", () => {
-        return storage.getPackageHistory(account.id, app.id, deployment.id).then((actualPackageHistory: storageTypes.Package[]) => {
+        return storage.getPackageHistory(deployment.id).then((actualPackageHistory: storageTypes.Package[]) => {
           assert.equal(JSON.stringify(actualPackageHistory), JSON.stringify(expectedPackageHistory));
         });
       });
 
       it("can update package history", () => {
         return storage
-          .getPackageHistory(account.id, app.id, deployment.id)
+          .getPackageHistory(deployment.id)
           .then((actualPackageHistory: storageTypes.Package[]) => {
             assert.equal(JSON.stringify(actualPackageHistory), JSON.stringify(expectedPackageHistory));
             expectedPackageHistory[0].description = "new description for v1";
@@ -1122,10 +1120,10 @@ function storageTests(StorageType: new (...args: any[]) => storageTypes.Storage,
             expectedPackageHistory[2].description = "new description for v3";
             expectedPackageHistory[2].isMandatory = false;
             expectedPackageHistory[2].isDisabled = true;
-            return storage.updatePackageHistory(account.id, app.id, deployment.id, expectedPackageHistory);
+            return storage.updatePackageHistory(deployment.id, expectedPackageHistory);
           })
           .then(() => {
-            return storage.getPackageHistory(account.id, app.id, deployment.id);
+            return storage.getPackageHistory(deployment.id);
           })
           .then((actualPackageHistory: storageTypes.Package[]) => {
             assert.equal(JSON.stringify(actualPackageHistory), JSON.stringify(expectedPackageHistory));
@@ -1134,14 +1132,14 @@ function storageTests(StorageType: new (...args: any[]) => storageTypes.Storage,
 
       it("updatePackageHistory does not clear package history", () => {
         return storage
-          .getPackageHistory(account.id, app.id, deployment.id)
+          .getPackageHistory(deployment.id)
           .then((actualPackageHistory: storageTypes.Package[]) => {
             assert.equal(JSON.stringify(actualPackageHistory), JSON.stringify(expectedPackageHistory));
-            return storage.updatePackageHistory(account.id, app.id, deployment.id, /*history*/ null);
+            return storage.updatePackageHistory(deployment.id, /*history*/ null);
           })
           .then(failOnCallSucceeded, (error: storageTypes.StorageError) => {
             assert.equal(error.code, storageTypes.ErrorCode.Other);
-            return storage.getPackageHistory(account.id, app.id, deployment.id);
+            return storage.getPackageHistory(deployment.id);
           })
           .then((actualPackageHistory: storageTypes.Package[]) => {
             assert.equal(JSON.stringify(actualPackageHistory), JSON.stringify(expectedPackageHistory));
@@ -1153,17 +1151,15 @@ function storageTests(StorageType: new (...args: any[]) => storageTypes.Storage,
   describe("Blob", () => {
     it("can add a blob", () => {
       var fileContents = "test stream";
-      return storage
-        .addBlob(shortid.generate(), utils.makeStreamFromString(fileContents), fileContents.length)
-        .then((blobId: string) => {
-          assert(blobId);
-        });
+      return storage.addBlob(shortid.generate(), utils.makeStreamFromString(fileContents)).then((blobId: string) => {
+        assert(blobId);
+      });
     });
 
     it("can get a blob url", () => {
       var fileContents = "test stream";
       return storage
-        .addBlob(shortid.generate(), utils.makeStreamFromString(fileContents), fileContents.length)
+        .addBlob(shortid.generate(), utils.makeStreamFromString(fileContents))
         .then((blobId: string) => {
           return storage.getBlobUrl(blobId);
         })
@@ -1180,7 +1176,7 @@ function storageTests(StorageType: new (...args: any[]) => storageTypes.Storage,
       var fileContents = "test stream";
       var blobId: string;
       return storage
-        .addBlob(shortid.generate(), utils.makeStreamFromString(fileContents), fileContents.length)
+        .addBlob(shortid.generate(), utils.makeStreamFromString(fileContents))
         .then((id: string) => {
           blobId = id;
           return storage.removeBlob(blobId);

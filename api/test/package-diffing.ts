@@ -244,7 +244,7 @@ function packageDiffTests(StorageType: new (...args: any[]) => storage.Storage):
       .then((packageHash: string) => {
         info.packageHash = packageHash;
         var json: string = manifest.serialize();
-        return storage.addBlob(shortid.generate(), utils.makeStreamFromString(json), json.length);
+        return storage.addBlob(shortid.generate(), utils.makeStreamFromString(json));
       })
       .then((blobId: string) => {
         return storage.getBlobUrl(blobId);
@@ -254,7 +254,7 @@ function packageDiffTests(StorageType: new (...args: any[]) => storage.Storage):
         return utils.getStreamAndSizeForFile(filePath);
       })
       .then((props: utils.FileProps) => {
-        return storage.addBlob(shortid.generate(), props.stream, props.size);
+        return storage.addBlob(shortid.generate(), props.stream);
       })
       .then((blobId: string) => {
         return storage.getBlobUrl(blobId);
@@ -263,9 +263,5 @@ function packageDiffTests(StorageType: new (...args: any[]) => storage.Storage):
         info.blobUrl = savedBlobUrl;
         return info;
       });
-  }
-
-  function failOnCallSucceeded(result: any): any {
-    throw new Error("Expected the promise to be rejected, but it succeeded with value " + (result ? JSON.stringify(result) : result));
   }
 }

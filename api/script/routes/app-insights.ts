@@ -20,14 +20,11 @@ enum ServiceResource {
   Deployments,
   DeploymentsWithId,
   LinkGitHub,
-  LinkMicrosoft,
   LoginGitHub,
-  LoginMicrosoft,
   Metrics,
   Other,
   Promote,
   RegisterGitHub,
-  RegisterMicrosoft,
   Release,
   ReportStatusDeploy,
   ReportStatusDownload,
@@ -75,20 +72,14 @@ export class AppInsights {
     { resource: ServiceResource.DeploymentsWithId, regExp: /^\/apps\/[^\/]+\/deployments\/[^\/]+[\/]?$/i, tag: "Deployment" },
     // /auth/link/github
     { resource: ServiceResource.LinkGitHub, regExp: /^\/auth\/link\/github[\/]?/i, tag: "Link GitHub account" },
-    // /auth/link/microsoft
-    { resource: ServiceResource.LinkMicrosoft, regExp: /^\/auth\/link\/microsoft[\/]?/i, tag: "Link Microsoft account" },
     // /auth/login/github
     { resource: ServiceResource.LoginGitHub, regExp: /^\/auth\/login\/github[\/]?/i, tag: "Login with GitHub" },
-    // /auth/login/microsoft
-    { resource: ServiceResource.LoginMicrosoft, regExp: /^\/auth\/login\/microsoft[\/]?/i, tag: "Login with Microsoft" },
     // /apps/abc123/deployments/xyz123/metrics
     { resource: ServiceResource.Metrics, regExp: /^\/apps\/[^\/]+\/deployments\/[^\/]+\/metrics[\/]?$/i, tag: "Deployment Metrics" },
     // /apps/abc123/deployments/xyz123/promote/def123
     { resource: ServiceResource.Promote, regExp: /^\/apps\/[^\/]+\/deployments\/[^\/]+\/promote\/[^\/]+[\/]?$/i, tag: "Package" },
     // /auth/register/github
     { resource: ServiceResource.RegisterGitHub, regExp: /^\/auth\/register\/github[\/]?/i, tag: "Register with GitHub" },
-    // /auth/register/microsoft
-    { resource: ServiceResource.RegisterMicrosoft, regExp: /^\/auth\/register\/microsoft[\/]?/i, tag: "Register with Microsoft" },
     // /apps/abc123/deployments/xyz123/release
     { resource: ServiceResource.Release, regExp: /^\/apps\/[^\/]+\/deployments\/[^\/]+\/release[\/]?$/i, tag: "Package" },
     // /reportStatus/deploy or /reportStatus/deploy/

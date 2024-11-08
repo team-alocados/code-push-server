@@ -165,7 +165,6 @@ function managementTests(useJsonStorage?: boolean): void {
 
       it("creates new access key which expires in the specified expiry for existing account", (done): void => {
         var accessKeyRequest: restTypes.AccessKeyRequest = testUtils.makeAccessKeyRequest();
-        var oldAccessKey: storage.AccessKey = accessKey;
         var delay = 1000; // 1 second
         accessKeyRequest.ttl = delay;
 
@@ -1258,7 +1257,7 @@ function managementTests(useJsonStorage?: boolean): void {
               { packageInfo: releasePackage },
               () => {
                 storage
-                  .getPackageHistory(account.id, app.id, deployment.id)
+                  .getPackageHistory(deployment.id)
                   .then((packageHistory: storage.Package[]) => {
                     assert.strictEqual(packageHistory[1].rollout, null);
                   })
@@ -1281,7 +1280,7 @@ function managementTests(useJsonStorage?: boolean): void {
           { packageInfo: releasePackage },
           () => {
             storage
-              .getPackageHistory(account.id, app.id, deployment.id)
+              .getPackageHistory(deployment.id)
               .then((packageHistory: storage.Package[]) => {
                 assert.equal(packageHistory.length, 2);
                 assert.equal(packageHistory[1].isDisabled, true);
@@ -1472,7 +1471,7 @@ function managementTests(useJsonStorage?: boolean): void {
                 var url: string = `/apps/${app.name}/deployments/${otherDeployment.name}/promote/${deployment.name}`;
                 POST(url, { packageInfo: {} }, () => {
                   storage
-                    .getPackageHistory(account.id, app.id, deployment.id)
+                    .getPackageHistory(deployment.id)
                     .then((newPackageHistory: storage.Package[]) => {
                       var disabledPackage = newPackageHistory[newPackageHistory.length - 2];
                       var promotedPackage = newPackageHistory[newPackageHistory.length - 1];
